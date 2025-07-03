@@ -9,14 +9,16 @@ app.use(cors({
     credentials : true
 }))
 
-
 app.use(express.json({limit : '16kb'})) //for json data
 app.use(express.urlencoded({extended : true})) // for url-encoded data
 app.use(express.static("public"))
 app.use(cookieParser())
 
 
-app.get('/' , (req , res) =>{
-    res.send("At the end, I become the bad chapter of her life")
-})
+//route imort
+import userRouter from './routes/user.routes.js'
+//route declaration
+app.use("/api/v1/users" , userRouter)
+
+
 export {app}
