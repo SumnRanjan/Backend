@@ -2,7 +2,7 @@
 import dotenv from 'dotenv'
 import connectDB from './db/index.js'
 import { app } from './app.js';
-dotenv.config();
+dotenv.config('./.env');
 
 connectDB()
 .then(() =>{
@@ -13,7 +13,7 @@ connectDB()
 .catch((err) =>{
     console.log("MongoDB connection faild !!!" , err)
 })
-console.log("🚨 Mongo URI from .env:", process.env.MONGODB_URL);
+
 
 
 
