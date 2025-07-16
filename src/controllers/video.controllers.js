@@ -4,7 +4,7 @@ import {User} from "../models/user.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
-import {uploadOnCloudinary} from "../utils/cloudnary.js"
+import {uploadOnCloudinary , deleteFromCloudinary } from "../utils/cloudnary.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -193,7 +193,12 @@ const deleteVideo = asyncHandler(async (req, res) => {
     if(video.owner.toString() !== req.user._id.toString()){
         throw new ApiError(403, "You are not authorized to delete this video");
     }
-    
+
+    //Delete video file from Cloudinary
+     await deleteFromCloudinary(video.videoFile, "video");
+    //Delete thumbnail image from Cloudinary
+    await deleteFromCloudinary(video.thumbnail, "image");
+
     await video.deleteOne();
 
     return res
@@ -226,7 +231,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     return res
     .status(200)
     .json(new ApiResponse(200, video, `Video has been ${video.isPublished ? "published" : "unpublished"} successfully`))
-    
+
 })
 
 export {
