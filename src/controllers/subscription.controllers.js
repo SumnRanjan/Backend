@@ -7,8 +7,46 @@ import {asyncHandler} from "../utils/asyncHandler.js"
 
 
 const toggleSubscription = asyncHandler(async (req, res) => {
-    const {channelId} = req.params
     // TODO: toggle subscription
+    const {channelId} = req.params
+    const subscriberId = req.user._id;
+
+    if(!mongoose.isValidObjectId(channelId)){
+        throw new ApiError(400, "Invalid channel ID")
+    }
+
+    if(channelId.toString() === subscriberId.toString()){
+        throw new ApiError(400, "You cannot subscribe to yourself");
+    }
+
+    const channel = await User.findById(channelId)
+
+    if(!channel){
+        throw new ApiError(404, "Channel not found")
+    }
+
+    const existingSubscription = await Subscription.findOne({
+        subscriber : subscriberId,
+        channel : channelId,
+    })
+
+    let message;
+
+    if(existingSubscription){
+        await existingSubscription.deleteOne()
+        message = "Unsubscribed successfully"
+    }else{
+        await Subscription.create({
+            subscriber: subscriberId,
+            channel: channelId,
+        });
+        message = "Subscribed successfully";
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200 , null , message))
+    
 })
 
 // controller to return subscriber list of a channel

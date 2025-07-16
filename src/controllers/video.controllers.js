@@ -195,7 +195,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     }
 
     //Delete video file from Cloudinary
-     await deleteFromCloudinary(video.videoFile, "video");
+    await deleteFromCloudinary(video.videoFile, "video");
     //Delete thumbnail image from Cloudinary
     await deleteFromCloudinary(video.thumbnail, "image");
 
