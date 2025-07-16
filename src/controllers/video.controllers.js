@@ -8,13 +8,103 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
     //TODO: get all videos based on query, sort, pagination
+
+    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
+    const pageNumber = parseInt(page)
+    const limitNumber  = parseInt(limit)
+    const sortOrder = sortType == 'asc' ? 1 : -1;
+
+    const filter = {isPublished : true}
+
+    if(userId){
+        filter.owner = new mongoose.Types.ObjectId(userId)
+    }
+
+    if(query){
+        filter.$or = [
+            {title : {$regex : query , $options : "i"}},
+            {description : {$regex : query , $options : "i"}}
+        ]
+    }
+
+    const sortOption = {
+        [sortBy] : sortOrder
+    }
+
+    const videos = await Video.aggregate([
+        {$match : filter},
+        {$sort : sortOption},
+        {$skip : (pageNumber - 1) * limitNumber},
+        {$limit : limitNumber},
+        {
+            $lookup : {
+                from : "users",
+                localField : "owner",
+                foreignField: "_id",
+                as: "owner"
+            }
+        },
+        { $unwind: "$owner" },
+        {
+            $project: {
+                title: 1,
+                description: 1,
+                thumbnail: 1,
+                videoFile: 1,
+                duration: 1,
+                views: 1,
+                isPublished: 1,
+                createdAt: 1,
+                owner: {
+                _id: 1,
+                username: 1,
+                fullName: 1,
+                avatar: 1
+                }
+            }
+        }
+    ])
+
+    return res.status(200).json(
+    new ApiResponse(200, videos, "Videos fetched successfully"))
+
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
-    const { title, description} = req.body
     // TODO: get video, upload to cloudinary, create video
+    
+    const { title, description} = req.body
+    const {videoFile , thumbnail} = req.files;
+
+    if (!videoFile || !thumbnail || !title || !description) {
+        throw new ApiError(400, "All fields are required");
+    }
+
+    const uploadedVideo = await uploadOnCloudinary(videoFile[0].path , "video")
+    const uploadedThumbnail = await uploadOnCloudinary(thumbnail[0].path)
+
+    if(!uploadedVideo.url || !uploadedThumbnail.url){
+        throw new ApiError(500, "File upload failed")
+    }
+
+    const video = await Video.create({
+        title,
+        description,
+        videoFile : uploadedVideo.url,
+        thumbnail : uploadedThumbnail.url,
+        duration : uploadedVideo.duration || 0,
+        owner: req.user._id
+    })
+
+    if (!video) {
+        throw new ApiError(500, "Something went wrong while creating the video");
+    }
+
+    return res
+    .status(201)
+    .json(new ApiResponse(201, video, "Video published successfully"));
+
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
